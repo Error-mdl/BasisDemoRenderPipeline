@@ -782,8 +782,16 @@ namespace UnityEngine.Rendering.Universal
 
         private void UpdateInstanceOccluders(RenderGraph renderGraph, UniversalCameraData cameraData, TextureHandle depthTexture)
         {
+            /// BASISVR MODIFIED - Fix bad resolution being calculated here. Somehow pixelWidth/Height are just wrong sometimes? Just look at the depth RT descriptor instead
+            /*
             int scaledWidth = (int)(cameraData.pixelWidth * cameraData.renderScale);
             int scaledHeight = (int)(cameraData.pixelHeight * cameraData.renderScale);
+            */
+            // Ask the texture what size it actually is.
+            var depthDesc = renderGraph.GetTextureDesc(depthTexture);
+            int scaledWidth = depthDesc.width;
+            int scaledHeight = depthDesc.height;
+
             bool isSinglePassXR = cameraData.xr.enabled && cameraData.xr.singlePassEnabled;
             var occluderParams = new OccluderParameters(cameraData.camera.GetInstanceID())
             {
@@ -1666,7 +1674,13 @@ namespace UnityEngine.Rendering.Universal
             // Depth Priming causes rendering errors with WebGL and WebGPU on Apple Arm64 GPUs.
             bool isNotWebGL = !IsWebGL();
             bool depthPrimingRequested = (depthPrimingRecommended && depthPrimingMode == DepthPrimingMode.Auto) || depthPrimingMode == DepthPrimingMode.Forced;
+            /// BASISVR MODIFIED - There is no good reason to force disable depth priming when MSAA is enabled.
+            // It used to work pre-6, and the reason for blocking it as stated by a Unity dev on the forums is that they simply they didn't want to deal with fixing issues with MSAA buffers and didn't see the value in it.
+            // https://discussions.unity.com/t/depth-priming-msaa-and-shader-artifacts/1560911/2
+            /*
             bool isNotMSAA = cameraData.cameraTargetDescriptor.msaaSamples == 1;
+            */
+            bool isNotMSAA = true;
 
             bool isFirstCameraToWriteDepth = cameraData.renderType == CameraRenderType.Base || cameraData.clearDepth;
             // Depth is not rendered in a depth-only camera setup with depth priming (UUM-38158)
